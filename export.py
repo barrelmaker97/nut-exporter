@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from prometheus_client import start_http_server, Gauge, Enum, Info
+import os
 import subprocess
 import time
 
@@ -24,8 +25,8 @@ ups_timer_shutdown = Gauge("ups_timer_shutdown", "Shutdown Timer")
 ups_timer_start = Gauge("ups_timer_start", "Start Timer")
 
 
-def check_stats(t):
-    data = subprocess.check_output(["/usr/bin/upsc", "ups"]).decode("utf-8").split()
+def check_stats(ups_name, ups_host, ups_port, poll_rate):
+    data = subprocess.check_output(["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]).decode("utf-8").split()
     clean_data = {data[i].strip(":"): data[i + 1] for i in range(0, len(data), 2)}
     battery_charge.set(clean_data.get("battery.charge"))
     battery_charge_low.set(clean_data.get("battery.charge.low"))
@@ -45,12 +46,16 @@ def check_stats(t):
     ups_status.info({"status": clean_data.get("ups.status")})
     ups_timer_shutdown.set(clean_data.get("ups.timer.shutdown"))
     ups_timer_start.set(clean_data.get("ups.timer.start"))
-    time.sleep(t)
+    time.sleep(poll_rate)
 
 
 if __name__ == "__main__":
     # Start up the server to expose the metrics.
     start_http_server(9120)
+    ups_name = os.getenv("UPS_NAME", "ups")
+    ups_host = os.getenv("UPS_HOST", "localhost")
+    ups_port = os.getenv("UPS_PORT", "3493")
+    poll_rate = int(os.getenv("POLL_RATE", "5"))
     # Check UPS stats
     while True:
-        check_stats(5)
+        check_stats(ups_name, ups_host, ups_port, poll_rate)
