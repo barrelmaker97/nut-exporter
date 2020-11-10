@@ -24,7 +24,7 @@ ups_timer_start = Gauge("ups_timer_start", "Start Timer")
 
 
 def check_stats(t):
-    data = subprocess.check_output(["upsc", "ups"]).decode("utf-8").split()
+    data = subprocess.check_output(["/usr/bin/upsc", "ups"]).decode("utf-8").split()
     clean_data = {data[i].strip(":"): data[i + 1] for i in range(0, len(data), 2)}
     battery_charge.set(clean_data.get("battery.charge"))
     battery_charge_low.set(clean_data.get("battery.charge.low"))
