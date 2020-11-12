@@ -1,8 +1,21 @@
-#!/usr/bin/env python3
 from prometheus_client import start_http_server, Gauge, Enum
 import os
 import subprocess
 import time
+import signal
+
+
+class GracefulKiller:
+    kill_now = False
+
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+        #signal.signal(signal.SIGQUIT, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.kill_now = True
+
 
 statuses = ["OL", "OB", "LB", "RB", "CHRG", "DISCHRG", "ALARM", "OVER", "TRIM", "BOOST", "BYPASS", "OFF", "CAL", "TEST", "FSD"]
 beeper_statuses = ["enabled", "disabled", "muted"]
@@ -63,6 +76,12 @@ if __name__ == "__main__":
     ups_host = os.getenv("UPS_HOST", "localhost")
     ups_port = os.getenv("UPS_PORT", "3493")
     poll_rate = int(os.getenv("POLL_RATE", "5"))
+
+    # Allow loop to be killed gracefully
+    killer = GracefulKiller()
+
     # Check UPS stats
-    while True:
+    while not killer.kill_now:
         check_stats(ups_name, ups_host, ups_port, poll_rate)
+
+    print("Shutting down...")

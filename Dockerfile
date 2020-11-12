@@ -5,5 +5,5 @@ RUN apt-get update && apt-get install --no-install-recommends nut-client -y \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 EXPOSE 9120
-CMD /export.py
+ENTRYPOINT ["python3", "/export.py"]
 COPY ./export.py /
