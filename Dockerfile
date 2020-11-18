@@ -1,4 +1,4 @@
-FROM python:slim
+FROM python:3.9-slim
 COPY ./requirements.txt /
 RUN apt-get update && apt-get install --no-install-recommends nut-client -y \
 	&& pip install -r /requirements.txt \
