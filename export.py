@@ -41,7 +41,7 @@ ups_timer_shutdown = Gauge("ups_timer_shutdown", "Shutdown Timer")
 ups_timer_start = Gauge("ups_timer_start", "Start Timer")
 
 
-def check_stats(ups_name, ups_host, ups_port, poll_rate):
+def check_stats(ups_name, ups_host, ups_port):
     command = ["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]
     data = subprocess.run(command, capture_output=True).stdout.decode("utf-8").split("\n")
     clean_data = {}
@@ -71,7 +71,6 @@ def check_stats(ups_name, ups_host, ups_port, poll_rate):
             ups_status.labels(status).set(0)
     ups_timer_shutdown.set(clean_data.get("ups.timer.shutdown"))
     ups_timer_start.set(clean_data.get("ups.timer.start"))
-    time.sleep(poll_rate)
 
 
 if __name__ == "__main__":
@@ -95,10 +94,11 @@ if __name__ == "__main__":
     # Check UPS stats
     while not killer.kill_now:
         try:
-            check_stats(ups_name, ups_host, ups_port, poll_rate)
+            check_stats(ups_name, ups_host, ups_port)
             logging.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logging.error(f"Failed to connect to {ups_fullname}!")
             logging.error(f"Exception: {e}!")
+        time.sleep(poll_rate)
 
     logging.info("Shutting down...")
