@@ -41,7 +41,8 @@ ups_timer_start = Gauge("ups_timer_start", "Start Timer")
 
 
 def check_stats(ups_name, ups_host, ups_port, poll_rate):
-    data = subprocess.check_output(["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]).decode("utf-8").split("\n")
+    command = ["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]
+    data = subprocess.run(command, capture_output=True).stdout.decode("utf-8").split("\n")
     clean_data = {}
     for entry in data:
         split = entry.split(": ")
