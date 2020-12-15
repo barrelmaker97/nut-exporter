@@ -3,6 +3,7 @@ import os
 import subprocess
 import time
 import signal
+import logging
 
 
 class GracefulKiller:
@@ -74,18 +75,30 @@ def check_stats(ups_name, ups_host, ups_port, poll_rate):
 
 
 if __name__ == "__main__":
+    # Set up logging
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(level=log_level, format="[%(asctime)s] [%(levelname)s] %(message)s")
+
     # Start up the server to expose the metrics.
     start_http_server(9120)
+    logging.info("Metrics server started")
     ups_name = os.getenv("UPS_NAME", "ups")
     ups_host = os.getenv("UPS_HOST", "localhost")
     ups_port = os.getenv("UPS_PORT", "3493")
+    ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
     poll_rate = int(os.getenv("POLL_RATE", "5"))
+    logging.info(f"UPS to be checked: {ups_fullname}")
 
     # Allow loop to be killed gracefully
     killer = GracefulKiller()
 
     # Check UPS stats
     while not killer.kill_now:
-        check_stats(ups_name, ups_host, ups_port, poll_rate)
+        try:
+            check_stats(ups_name, ups_host, ups_port, poll_rate)
+            logging.debug(f"Checked {ups_fullname}")
+        except Exception as e:
+            logging.error(f"Failed to connect to {ups_fullname}!")
+            logging.error(f"Exception: {e}!")
 
-    print("Shutting down...")
+    logging.info("Shutting down...")
