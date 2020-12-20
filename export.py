@@ -21,27 +21,32 @@ statuses = ["OL", "OB", "LB", "RB", "CHRG", "DISCHRG", "ALARM", "OVER", "TRIM", 
 beeper_statuses = ["enabled", "disabled", "muted"]
 
 # Create metrics
-battery_charge = Gauge("ups_battery_charge", "Current Battery Charge")
-battery_charge_low = Gauge("ups_battery_charge_low", "Battery Charge that indicates Low Battery")
-battery_charge_warning = Gauge("ups_battery_charge_warning", "Battery Charge Warning Threshold")
-battery_runtime = Gauge("ups_battery_runtime", "Battery Runtime")
-battery_runtime_low = Gauge("ups_battery_runtime_low", "Battery Runtime that indicates Low Battery")
-battery_voltage = Gauge("ups_battery_voltage", "Battery Voltage")
-battery_voltage_nominal = Gauge("ups_battery_voltage_nominal", "Nominal Battery Voltage")
-input_voltage = Gauge("ups_input_voltage", "Input Voltage")
-input_voltage_nominal = Gauge("ups_input_voltage_nominal", "Nominal Input Voltage")
-output_voltage = Gauge("ups_output_voltage", "Output Voltage")
+basic_metrics = {
+    "battery.charge" : Gauge("ups_battery_charge", "Current Battery Charge"),
+    "battery.charge.low" : Gauge("ups_battery_charge_low", "Battery Charge that indicates Low Battery"),
+    "battery.charge.warning" : Gauge("ups_battery_charge_warning", "Battery Charge Warning Threshold"),
+    "battery.runtime" : Gauge("ups_battery_runtime", "Battery Runtime"),
+    "battery.runtime.low" : Gauge("ups_battery_runtime_low", "Battery Runtime that indicates Low Battery"),
+    "battery.voltage" : Gauge("ups_battery_voltage", "Battery Voltage"),
+    "battery.voltage.nominal" : Gauge("ups_battery_voltage_nominal", "Nominal Battery Voltage"),
+    "input.voltage" : Gauge("ups_input_voltage", "Input Voltage"),
+    "input.voltage.nominal" : Gauge("ups_input_voltage_nominal", "Nominal Input Voltage"),
+    "output.voltage" : Gauge("ups_output_voltage", "Output Voltage"),
+    "ups.delay.shutdown" : Gauge("ups_delay_shutdown", "Shutdown Delay"),
+    "ups.delay.start" : Gauge("ups_delay_start", "Start Delay"),
+    "ups.load" : Gauge("ups_load", "Load Percentage"),
+    "ups.realpower.nominal" : Gauge("ups_realpower_nominal", "Nominal Real Power"),
+    "ups.timer.shutdown" : Gauge("ups_timer_shutdown", "Shutdown Timer"),
+    "ups.timer.start" : Gauge("ups_timer_start", "Start Timer"),
+}
+
+# Labeled metrics
 ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
-ups_delay_shutdown = Gauge("ups_delay_shutdown", "Shutdown Delay")
-ups_delay_start = Gauge("ups_delay_start", "Start Delay")
-ups_load = Gauge("ups_load", "Load Percentage")
-ups_realpower_nominal = Gauge("ups_realpower_nominal", "Nominal Real Power")
 ups_status = Gauge("ups_status", "UPS Status Code", ["status"])
-ups_timer_shutdown = Gauge("ups_timer_shutdown", "Shutdown Timer")
-ups_timer_start = Gauge("ups_timer_start", "Start Timer")
 
 
 def check_stats(ups_name, ups_host, ups_port):
+    # Read and clean data from UPS using upsc
     command = ["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]
     data = subprocess.run(command, capture_output=True).stdout.decode("utf-8").split("\n")
     clean_data = {}
@@ -49,32 +54,22 @@ def check_stats(ups_name, ups_host, ups_port):
         split = entry.split(": ")
         if split != [""]:
             clean_data[split[0]] = split[1]
-    battery_charge.set(clean_data.get("battery.charge"))
-    battery_charge_low.set(clean_data.get("battery.charge.low"))
-    battery_charge_warning.set(clean_data.get("battery.charge.warning"))
-    battery_runtime.set(clean_data.get("battery.runtime"))
-    battery_runtime_low.set(clean_data.get("battery.runtime.low"))
-    battery_voltage.set(clean_data.get("battery.voltage"))
-    battery_voltage_nominal.set(clean_data.get("battery.voltage.nominal"))
-    input_voltage.set(clean_data.get("input.voltage"))
-    input_voltage_nominal.set(clean_data.get("input.voltage.nominal"))
-    output_voltage.set(clean_data.get("output.voltage"))
+
+    # Set basic metrics
+    for metric in basic_metrics:
+        basic_metrics.get(metric).set(clean_data.get(metric))
+
+    # Set metrics with labels
     for status in beeper_statuses:
         if status in clean_data.get("ups.beeper.status"):
             ups_beeper_status.labels(status).set(1)
         else:
             ups_beeper_status.labels(status).set(0)
-    ups_delay_shutdown.set(clean_data.get("ups.delay.shutdown"))
-    ups_delay_start.set(clean_data.get("ups.delay.start"))
-    ups_load.set(clean_data.get("ups.load"))
-    ups_realpower_nominal.set(clean_data.get("ups.realpower.nominal"))
     for status in statuses:
         if status in clean_data.get("ups.status"):
             ups_status.labels(status).set(1)
         else:
             ups_status.labels(status).set(0)
-    ups_timer_shutdown.set(clean_data.get("ups.timer.shutdown"))
-    ups_timer_start.set(clean_data.get("ups.timer.start"))
 
 
 if __name__ == "__main__":
