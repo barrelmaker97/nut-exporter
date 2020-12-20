@@ -31,7 +31,7 @@ battery_voltage_nominal = Gauge("ups_battery_voltage_nominal", "Nominal Battery 
 input_voltage = Gauge("ups_input_voltage", "Input Voltage")
 input_voltage_nominal = Gauge("ups_input_voltage_nominal", "Nominal Input Voltage")
 output_voltage = Gauge("ups_output_voltage", "Output Voltage")
-ups_beeper_status = Enum("ups_beeper_status", "Beeper Status", states=beeper_statuses)
+ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
 ups_delay_shutdown = Gauge("ups_delay_shutdown", "Shutdown Delay")
 ups_delay_start = Gauge("ups_delay_start", "Start Delay")
 ups_load = Gauge("ups_load", "Load Percentage")
@@ -59,7 +59,11 @@ def check_stats(ups_name, ups_host, ups_port):
     input_voltage.set(clean_data.get("input.voltage"))
     input_voltage_nominal.set(clean_data.get("input.voltage.nominal"))
     output_voltage.set(clean_data.get("output.voltage"))
-    ups_beeper_status.state(clean_data.get("ups.beeper.status"))
+    for status in beeper_statuses:
+        if status in clean_data.get("ups.beeper.status"):
+            ups_beeper_status.labels(status).set(1)
+        else:
+            ups_beeper_status.labels(status).set(0)
     ups_delay_shutdown.set(clean_data.get("ups.delay.shutdown"))
     ups_delay_start.set(clean_data.get("ups.delay.start"))
     ups_load.set(clean_data.get("ups.load"))
