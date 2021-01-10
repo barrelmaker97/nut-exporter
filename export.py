@@ -44,6 +44,16 @@ basic_metrics = {
 ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
 ups_status = Gauge("ups_status", "UPS Status Code", ["status"])
 
+def clear_stats():
+    # Clear basic metrics
+    for metric in basic_metrics:
+        basic_metrics.get(metric).set(0)
+
+    # Clear metrics with labels
+    for status in beeper_statuses:
+        ups_beeper_status.labels(status).set(0)
+    for status in statuses:
+        ups_status.labels(status).set(0)
 
 def check_stats(ups_name, ups_host, ups_port):
     # Read and clean data from UPS using upsc
@@ -98,6 +108,7 @@ if __name__ == "__main__":
         except Exception as e:
             logging.error(f"Failed to connect to {ups_fullname}!")
             logging.error(f"Exception: {e}!")
+            clear_stats()
         time.sleep(poll_rate)
 
     logging.info("Shutting down...")
