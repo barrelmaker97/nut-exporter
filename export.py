@@ -19,6 +19,7 @@ class GracefulKiller:
         self.kill_now = True
 
 
+# Lists of possible UPS states, to be used by label-based metrics
 statuses = ["OL", "OB", "LB", "RB", "CHRG", "DISCHRG", "ALARM", "OVER", "TRIM", "BOOST", "BYPASS", "OFF", "CAL", "TEST", "FSD"]
 beeper_statuses = ["enabled", "disabled", "muted"]
 
@@ -47,6 +48,7 @@ ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
 ups_status = Gauge("ups_status", "UPS Status Code", ["status"])
 
 
+# Resets all stats to 0
 def clear_stats():
     # Clear basic metrics
     for metric in basic_metrics:
@@ -59,8 +61,8 @@ def clear_stats():
         ups_status.labels(status).set(0)
 
 
+# Read and clean data from UPS using upsc
 def check_stats(ups_name, ups_host, ups_port):
-    # Read and clean data from UPS using upsc
     command = ["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]
     data = subprocess.run(command, capture_output=True).stdout.decode("utf-8").split("\n")
     clean_data = {}
@@ -94,13 +96,16 @@ if __name__ == "__main__":
     # Start up the server to expose the metrics.
     start_http_server(9120)
     logging.info("Metrics server started")
+
+    # Read environment variables
     ups_name = os.getenv("UPS_NAME", "ups")
     ups_host = os.getenv("UPS_HOST", "localhost")
     ups_port = os.getenv("UPS_PORT", "3493")
-    ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
-    logging.info(f"UPS to be checked: {ups_fullname}")
     poll_rate = int(os.getenv("POLL_RATE", "5"))
     lookup_rate = int(os.getenv("LOOKUP_RATE", "100"))
+
+    ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
+    logging.info(f"UPS to be checked: {ups_fullname}")
     ups_ip = socket.gethostbyname(ups_host)
 
     # Allow loop to be killed gracefully
