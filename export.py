@@ -4,6 +4,7 @@ import subprocess
 import time
 import signal
 import logging
+import socket
 
 
 class GracefulKiller:
@@ -44,6 +45,7 @@ basic_metrics = {
 ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
 ups_status = Gauge("ups_status", "UPS Status Code", ["status"])
 
+
 def clear_stats():
     # Clear basic metrics
     for metric in basic_metrics:
@@ -54,6 +56,7 @@ def clear_stats():
         ups_beeper_status.labels(status).set(0)
     for status in statuses:
         ups_status.labels(status).set(0)
+
 
 def check_stats(ups_name, ups_host, ups_port):
     # Read and clean data from UPS using upsc
@@ -94,8 +97,10 @@ if __name__ == "__main__":
     ups_host = os.getenv("UPS_HOST", "localhost")
     ups_port = os.getenv("UPS_PORT", "3493")
     ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
-    poll_rate = int(os.getenv("POLL_RATE", "5"))
     logging.info(f"UPS to be checked: {ups_fullname}")
+    poll_rate = int(os.getenv("POLL_RATE", "5"))
+    lookup_rate = int(os.getenv("LOOKUP_RATE", "20"))
+    lookup_counter = lookup_rate + 1
 
     # Allow loop to be killed gracefully
     killer = GracefulKiller()
@@ -103,12 +108,19 @@ if __name__ == "__main__":
     # Check UPS stats
     while not killer.kill_now:
         try:
-            check_stats(ups_name, ups_host, ups_port)
+            if lookup_counter >= lookup_rate:
+                logging.debug("Resolving UPS IP Address...")
+                ups_ip = socket.gethostbyname(ups_host)
+                logging.debug(f"UPS IP Address is {ups_ip}")
+                logging.debug(f"UPS IP Address will be looked up again after {lookup_rate} checks")
+                lookup_counter = 0
+            check_stats(ups_name, ups_ip, ups_port)
             logging.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logging.error(f"Failed to connect to {ups_fullname}!")
             logging.error(f"Exception: {e}!")
             clear_stats()
         time.sleep(poll_rate)
+        lookup_counter += 1
 
     logging.info("Shutting down...")
