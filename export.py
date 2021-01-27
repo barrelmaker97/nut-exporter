@@ -5,6 +5,7 @@ import time
 import signal
 import logging
 import socket
+import itertools
 
 
 class GracefulKiller:
@@ -99,28 +100,29 @@ if __name__ == "__main__":
     ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
     logging.info(f"UPS to be checked: {ups_fullname}")
     poll_rate = int(os.getenv("POLL_RATE", "5"))
-    lookup_rate = int(os.getenv("LOOKUP_RATE", "20"))
-    lookup_counter = lookup_rate + 1
+    lookup_rate = int(os.getenv("LOOKUP_RATE", "100"))
+    ups_ip = socket.gethostbyname(ups_host)
 
     # Allow loop to be killed gracefully
     killer = GracefulKiller()
 
     # Check UPS stats
-    while not killer.kill_now:
+    for loop_counter in itertools.count():
+        if killer.kill_now:
+            break
         try:
-            if lookup_counter >= lookup_rate:
+            if loop_counter % lookup_rate == 0:
                 logging.debug("Resolving UPS IP Address...")
                 ups_ip = socket.gethostbyname(ups_host)
                 logging.debug(f"UPS IP Address is {ups_ip}")
-                logging.debug(f"UPS IP Address will be looked up again after {lookup_rate} checks")
-                lookup_counter = 0
-            check_stats(ups_name, ups_ip, ups_port)
-            logging.debug(f"Checked {ups_fullname}")
+                logging.debug(f"UPS IP Address will be looked up again after {lookup_rate} seconds")
+            if loop_counter % poll_rate == 0:
+                check_stats(ups_name, ups_ip, ups_port)
+                logging.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logging.error(f"Failed to connect to {ups_fullname}!")
             logging.error(f"Exception: {e}!")
             clear_stats()
-        time.sleep(poll_rate)
-        lookup_counter += 1
+        time.sleep(1)
 
     logging.info("Shutting down...")
