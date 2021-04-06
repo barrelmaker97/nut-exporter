@@ -1,4 +1,4 @@
-FROM python:3.9.3-slim-buster
+FROM python:3.9.4-slim-buster
 COPY ./requirements.txt /
 RUN apt-get update && apt-get install --no-install-recommends nut-client -y \
 	&& pip install -r /requirements.txt \
