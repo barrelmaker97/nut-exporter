@@ -12,3 +12,20 @@ All config is done via environment variables, listed below:
 | `LOG_LEVEL`   | Logging level of the exporter                                                                    | `info`      |
 | `POLL_RATE`   | Amount of time, in seconds, this exporter will wait between requests to the NUT server for data  | `5`         |
 | `LOOKUP_RATE` | Amount of time, in seconds, this exporter will wait between looking up the NUT server IP address | `100`       |
+
+# License
+
+Copyright (c) 2021 Nolan Cooper
+
+This exporter is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This exporter is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this exporter.  If not, see <https://www.gnu.org/licenses/>.
