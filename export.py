@@ -1,11 +1,12 @@
+#!/usr/bin/env python3
 from prometheus_client import start_http_server, Gauge
 import os
-import subprocess
 import time
 import signal
 import logging
 import socket
 import itertools
+from nut2 import PyNUTClient
 
 
 class GracefulKiller:
@@ -63,13 +64,7 @@ def clear_stats():
 
 # Read and clean data from UPS using upsc
 def check_stats(ups_name, ups_host, ups_port):
-    command = ["/bin/upsc", f"{ups_name}@{ups_host}:{ups_port}"]
-    data = subprocess.run(command, capture_output=True).stdout.decode("utf-8").split("\n")
-    clean_data = {}
-    for entry in data:
-        split = entry.split(": ")
-        if split != [""]:
-            clean_data[split[0]] = split[1]
+    clean_data = PyNUTClient(host=ups_host, port=ups_port).list_vars(ups_name)
 
     # Set basic metrics
     for metric in basic_metrics:
@@ -90,11 +85,17 @@ def check_stats(ups_name, ups_host, ups_port):
 
 if __name__ == "__main__":
     # Set up logging
+    logger = logging.getLogger("exporter")
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(level=log_level, format="[%(asctime)s] [%(levelname)s] %(message)s")
+    logger.setLevel(log_level)
+    stream_handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    logger.propagate = False
 
     # Read environment variables
-    logging.info("Reading configuration from environment...")
+    logger.info("Reading configuration from environment...")
     ups_name = os.getenv("UPS_NAME", "ups")
     ups_host = os.getenv("UPS_HOST", "localhost")
     ups_port = os.getenv("UPS_PORT", "3493")
@@ -103,15 +104,15 @@ if __name__ == "__main__":
 
     ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
     ups_ip = socket.gethostbyname(ups_host)
-    logging.info(f"UPS to be checked: {ups_fullname}")
-    logging.info(f"UPS IP Address: {ups_ip}")
-    logging.info(f"Poll Rate: Every {poll_rate} seconds")
-    logging.info(f"DNS Lookup Rate: Every {lookup_rate} seconds")
+    logger.info(f"UPS to be checked: {ups_fullname}")
+    logger.info(f"UPS IP Address: {ups_ip}")
+    logger.info(f"Poll Rate: Every {poll_rate} seconds")
+    logger.info(f"DNS Lookup Rate: Every {lookup_rate} seconds")
 
     # Start up the server to expose the metrics.
-    logging.info("Starting metrics server...")
+    logger.info("Starting metrics server...")
     start_http_server(9120)
-    logging.info("Metrics server started")
+    logger.info("Metrics server started")
 
     # Allow loop to be killed gracefully
     killer = GracefulKiller()
@@ -119,21 +120,21 @@ if __name__ == "__main__":
     # Check UPS stats
     for loop_counter in itertools.count():
         if killer.kill_now:
-            logging.debug("Recieved SIGINT or SIGTERM")
+            logger.debug("Recieved SIGINT or SIGTERM")
             break
         try:
             if loop_counter % lookup_rate == 0:
-                logging.debug("Resolving UPS IP Address...")
+                logger.debug("Resolving UPS IP Address...")
                 ups_ip = socket.gethostbyname(ups_host)
-                logging.debug(f"UPS IP Address is {ups_ip}")
+                logger.debug(f"UPS IP Address is {ups_ip}")
             if loop_counter % poll_rate == 0:
                 check_stats(ups_name, ups_ip, ups_port)
-                logging.debug(f"Checked {ups_fullname}")
+                logger.debug(f"Checked {ups_fullname}")
         except Exception as e:
-            logging.error(f"Failed to connect to {ups_fullname}!")
-            logging.debug(f"Exception: {e}!")
+            logger.error(f"Failed to connect to {ups_fullname}!")
+            logger.debug(f"Exception: {e}!")
             clear_stats()
-            logging.debug("Reset stats to 0 because UPS was unreachable")
+            logger.debug("Reset stats to 0 because UPS was unreachable")
         time.sleep(1)
 
-    logging.info("Shutting down...")
+    logger.info("Shutting down...")
