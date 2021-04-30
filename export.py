@@ -91,18 +91,12 @@ if __name__ == "__main__":
     logger.info(f"Poll Rate: Every {poll_rate} seconds")
     logger.info(f"DNS Lookup Rate: Every {lookup_rate} seconds")
 
-    # Start up the server to expose the metrics.
-    logger.info("Starting metrics server...")
-    start_http_server(9120)
-    logger.info("Metrics server started")
-
-    # Allow loop to be killed gracefully
-    killer = GracefulKiller()
-
     # Get list of available stats
+    logger.info("Determining list of available metrics...")
     client = PyNUTClient(host=ups_host, port=ups_port)
     client_vars = client.list_vars(ups_name)
-    for var in client_vars:
+    unavailable_count = 0
+    for metric_count, var in enumerate(client_vars):
         desc = client.var_description(ups_name, var)
         var_split = var.split(".")
         if var_split[0] != "ups":
@@ -114,6 +108,16 @@ if __name__ == "__main__":
             basic_metrics.update(metric)
         except Exception as e:
             logger.debug(f"Exception: {e}!")
+            unavailable_count += 1
+    logger.info(f"{metric_count + 1 - unavailable_count} metrics available to be exported")
+
+    # Start up the server to expose the metrics.
+    logger.info("Starting metrics server...")
+    start_http_server(9120)
+    logger.info("Metrics server started")
+
+    # Allow loop to be killed gracefully
+    killer = GracefulKiller()
 
     # Check UPS stats
     for loop_counter in itertools.count():
