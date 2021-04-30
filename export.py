@@ -31,8 +31,8 @@ ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
 ups_status = Gauge("ups_status", "UPS Status Code", ["status"])
 
 
-# Resets all stats to 0
-def clear_stats():
+# Resets all metrics to 0
+def clear_metrics():
     # Clear basic metrics
     for metric in basic_metrics:
         basic_metrics.get(metric).set(0)
@@ -45,7 +45,7 @@ def clear_stats():
 
 
 # Read and clean data from UPS using upsc
-def check_stats(ups_name, ups_host, ups_port):
+def check_metrics(ups_name, ups_host, ups_port):
     clean_data = PyNUTClient(host=ups_host, port=ups_port).list_vars(ups_name)
 
     # Set basic metrics
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     logger.info(f"Poll Rate: Every {poll_rate} seconds")
     logger.info(f"DNS Lookup Rate: Every {lookup_rate} seconds")
 
-    # Get list of available stats
+    # Get list of available metrics
     logger.info("Determining list of available metrics...")
     client = PyNUTClient(host=ups_host, port=ups_port)
     client_vars = client.list_vars(ups_name)
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # Allow loop to be killed gracefully
     killer = GracefulKiller()
 
-    # Check UPS stats
+    # Check UPS metrics
     for loop_counter in itertools.count():
         if killer.kill_now:
             logger.debug("Recieved SIGINT or SIGTERM")
@@ -130,13 +130,13 @@ if __name__ == "__main__":
                 ups_ip = socket.gethostbyname(ups_host)
                 logger.debug(f"UPS IP Address is {ups_ip}")
             if loop_counter % poll_rate == 0:
-                check_stats(ups_name, ups_ip, ups_port)
+                check_metrics(ups_name, ups_ip, ups_port)
                 logger.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logger.error(f"Failed to connect to {ups_fullname}!")
             logger.debug(f"Exception: {e}!")
-            clear_stats()
-            logger.debug("Reset stats to 0 because UPS was unreachable")
+            clear_metrics()
+            logger.debug("Reset metrics to 0 because UPS was unreachable")
         time.sleep(1)
 
     logger.info("Shutting down...")
