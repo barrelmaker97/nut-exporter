@@ -104,7 +104,10 @@ if __name__ == "__main__":
     client_vars = client.list_vars(ups_name)
     for var in client_vars:
         desc = client.var_description(ups_name, var)
-        name = var.replace(".", "_")
+        var_split = var.split(".")
+        if var_split[0] != "ups":
+            var_split.insert(0, "ups")
+        name = "_".join(var_split)
         try:
             float(client_vars.get(var))
             metric = {var: Gauge(name, desc)}
