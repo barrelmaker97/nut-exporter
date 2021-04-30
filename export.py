@@ -24,25 +24,7 @@ class GracefulKiller:
 statuses = ["OL", "OB", "LB", "RB", "CHRG", "DISCHRG", "ALARM", "OVER", "TRIM", "BOOST", "BYPASS", "OFF", "CAL", "TEST", "FSD"]
 beeper_statuses = ["enabled", "disabled", "muted"]
 
-# Create metrics
-basic_metrics = {
-    "battery.charge": Gauge("ups_battery_charge", "Current Battery Charge"),
-    "battery.charge.low": Gauge("ups_battery_charge_low", "Battery Charge that indicates Low Battery"),
-    "battery.charge.warning": Gauge("ups_battery_charge_warning", "Battery Charge Warning Threshold"),
-    "battery.runtime": Gauge("ups_battery_runtime", "Battery Runtime"),
-    "battery.runtime.low": Gauge("ups_battery_runtime_low", "Battery Runtime that indicates Low Battery"),
-    "battery.voltage": Gauge("ups_battery_voltage", "Battery Voltage"),
-    "battery.voltage.nominal": Gauge("ups_battery_voltage_nominal", "Nominal Battery Voltage"),
-    "input.voltage": Gauge("ups_input_voltage", "Input Voltage"),
-    "input.voltage.nominal": Gauge("ups_input_voltage_nominal", "Nominal Input Voltage"),
-    "output.voltage": Gauge("ups_output_voltage", "Output Voltage"),
-    "ups.delay.shutdown": Gauge("ups_delay_shutdown", "Shutdown Delay"),
-    "ups.delay.start": Gauge("ups_delay_start", "Start Delay"),
-    "ups.load": Gauge("ups_load", "Load Percentage"),
-    "ups.realpower.nominal": Gauge("ups_realpower_nominal", "Nominal Real Power"),
-    "ups.timer.shutdown": Gauge("ups_timer_shutdown", "Shutdown Timer"),
-    "ups.timer.start": Gauge("ups_timer_start", "Start Timer"),
-}
+basic_metrics = {}
 
 # Labeled metrics
 ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
@@ -116,6 +98,19 @@ if __name__ == "__main__":
 
     # Allow loop to be killed gracefully
     killer = GracefulKiller()
+
+    # Get list of available stats
+    client = PyNUTClient(host=ups_host, port=ups_port)
+    client_vars = client.list_vars("ups")
+    for var in client_vars:
+        desc = client.var_description("ups", var)
+        name = var.replace(".", "_")
+        try:
+            float(client_vars.get(var))
+            metric = {var: Gauge(name, desc)}
+            basic_metrics.update(metric)
+        except Exception as e:
+            logger.debug(f"Exception: {e}!")
 
     # Check UPS stats
     for loop_counter in itertools.count():
