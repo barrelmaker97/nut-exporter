@@ -97,15 +97,14 @@ if __name__ == "__main__":
     client_vars = client.list_vars(ups_name)
     unavailable_count = 0
     for metric_count, var in enumerate(client_vars):
-        desc = client.var_description(ups_name, var)
-        var_split = var.split(".")
-        if var_split[0] != "ups":
-            var_split.insert(0, "ups")
-        name = "_".join(var_split)
         try:
             float(client_vars.get(var))
-            metric = {var: Gauge(name, desc)}
-            basic_metrics.update(metric)
+            desc = client.var_description(ups_name, var)
+            var_split = var.split(".")
+            if var_split[0] != "ups":
+                var_split.insert(0, "ups")
+            name = "_".join(var_split)
+            basic_metrics.update({var: Gauge(name, desc)})
         except Exception as e:
             logger.debug(f"Exception: {e}!")
             unavailable_count += 1
