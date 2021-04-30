@@ -101,9 +101,9 @@ if __name__ == "__main__":
 
     # Get list of available stats
     client = PyNUTClient(host=ups_host, port=ups_port)
-    client_vars = client.list_vars("ups")
+    client_vars = client.list_vars(ups_name)
     for var in client_vars:
-        desc = client.var_description("ups", var)
+        desc = client.var_description(ups_name, var)
         name = var.replace(".", "_")
         try:
             float(client_vars.get(var))
