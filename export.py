@@ -109,7 +109,8 @@ if __name__ == "__main__":
         except Exception as e:
             logger.debug(f"Exception: {e}!")
             unavailable_count += 1
-    logger.info(f"{metric_count + 1 - unavailable_count} metrics available to be exported")
+    available_count = metric_count + 1 - unavailable_count
+    logger.info(f"{available_count} metrics available to be exported")
 
     # Start up the server to expose the metrics.
     logger.info("Starting metrics server...")
