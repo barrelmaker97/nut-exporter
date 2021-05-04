@@ -24,18 +24,16 @@ class GracefulKiller:
 statuses = ["OL", "OB", "LB", "RB", "CHRG", "DISCHRG", "ALARM", "OVER", "TRIM", "BOOST", "BYPASS", "OFF", "CAL", "TEST", "FSD"]
 beeper_statuses = ["enabled", "disabled", "muted"]
 
-basic_metrics = {}
-
 # Labeled metrics
 ups_beeper_status = Gauge("ups_beeper_status", "Beeper Status", ["status"])
 ups_status = Gauge("ups_status", "UPS Status Code", ["status"])
 
 
 # Resets all metrics to 0
-def clear_metrics():
+def clear_metrics(metrics):
     # Clear basic metrics
-    for metric in basic_metrics:
-        basic_metrics.get(metric).set(0)
+    for metric in metrics:
+        metrics.get(metric).set(0)
 
     # Clear metrics with labels
     for status in beeper_statuses:
@@ -44,13 +42,13 @@ def clear_metrics():
         ups_status.labels(status).set(0)
 
 
-# Read and clean data from UPS using upsc
-def check_metrics(ups_name, ups_host, ups_port):
+# Read data from UPS
+def check_metrics(ups_name, ups_host, ups_port, metrics):
     clean_data = PyNUTClient(host=ups_host, port=ups_port).list_vars(ups_name)
 
     # Set basic metrics
-    for metric in basic_metrics:
-        basic_metrics.get(metric).set(clean_data.get(metric))
+    for metric in metrics:
+        metrics.get(metric).set(clean_data.get(metric))
 
     # Set metrics with labels
     for status in beeper_statuses:
@@ -63,6 +61,25 @@ def check_metrics(ups_name, ups_host, ups_port):
             ups_status.labels(status).set(1)
         else:
             ups_status.labels(status).set(0)
+
+
+# Create dict of UPS variables with Prometheus Gauges
+def get_metrics(ups_name, ups_host, ups_port):
+    client = PyNUTClient(host=ups_host, port=ups_port)
+    client_vars = client.list_vars(ups_name)
+    metrics = {}
+    for var in client_vars:
+        try:
+            float(client_vars.get(var))
+            desc = client.var_description(ups_name, var)
+            var_split = var.split(".")
+            if var_split[0] != "ups":
+                var_split.insert(0, "ups")
+            name = "_".join(var_split)
+            metrics.update({var: Gauge(name, desc)})
+        except Exception as e:
+            logger.debug(f"Exception: {e}!")
+    return metrics
 
 
 if __name__ == "__main__":
@@ -84,6 +101,7 @@ if __name__ == "__main__":
     poll_rate = int(os.getenv("POLL_RATE", "5"))
     lookup_rate = int(os.getenv("LOOKUP_RATE", "100"))
 
+    # Print configuration info
     ups_fullname = f"{ups_name}@{ups_host}:{ups_port}"
     ups_ip = socket.gethostbyname(ups_host)
     logger.info(f"UPS to be checked: {ups_fullname}")
@@ -93,23 +111,9 @@ if __name__ == "__main__":
 
     # Get list of available metrics
     logger.info("Determining list of available metrics...")
-    client = PyNUTClient(host=ups_host, port=ups_port)
-    client_vars = client.list_vars(ups_name)
-    unavailable_count = 0
-    for metric_count, var in enumerate(client_vars):
-        try:
-            float(client_vars.get(var))
-            desc = client.var_description(ups_name, var)
-            var_split = var.split(".")
-            if var_split[0] != "ups":
-                var_split.insert(0, "ups")
-            name = "_".join(var_split)
-            basic_metrics.update({var: Gauge(name, desc)})
-        except Exception as e:
-            logger.debug(f"Exception: {e}!")
-            unavailable_count += 1
-    available_count = metric_count + 1 - unavailable_count
-    logger.info(f"{available_count} metrics available to be exported")
+    basic_metrics = get_metrics(ups_name, ups_host, ups_port)
+    metrics_count = len(basic_metrics.keys())
+    logger.info(f"{metrics_count} metrics available to be exported")
 
     # Start up the server to expose the metrics.
     logger.info("Starting metrics server...")
@@ -130,12 +134,12 @@ if __name__ == "__main__":
                 ups_ip = socket.gethostbyname(ups_host)
                 logger.debug(f"UPS IP Address is {ups_ip}")
             if loop_counter % poll_rate == 0:
-                check_metrics(ups_name, ups_ip, ups_port)
+                check_metrics(ups_name, ups_ip, ups_port, basic_metrics)
                 logger.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logger.error(f"Failed to connect to {ups_fullname}!")
             logger.debug(f"Exception: {e}!")
-            clear_metrics()
+            clear_metrics(basic_metrics)
             logger.debug("Reset metrics to 0 because UPS was unreachable")
         time.sleep(1)
 
