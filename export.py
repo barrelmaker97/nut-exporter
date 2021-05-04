@@ -35,6 +35,7 @@ def clear_metrics(metrics):
     for metric in metrics:
         metrics.get(metric).set(0)
 
+def clear_label_metrics():
     # Clear metrics with labels
     for status in beeper_statuses:
         ups_beeper_status.labels(status).set(0)
@@ -43,21 +44,20 @@ def clear_metrics(metrics):
 
 
 # Read data from UPS
-def check_metrics(ups_name, ups_host, ups_port, metrics):
-    clean_data = PyNUTClient(host=ups_host, port=ups_port).list_vars(ups_name)
-
+def check_metrics(data, metrics):
     # Set basic metrics
     for metric in metrics:
-        metrics.get(metric).set(clean_data.get(metric))
+        metrics.get(metric).set(data.get(metric))
 
+def check_label_metrics(data):
     # Set metrics with labels
     for status in beeper_statuses:
-        if status in clean_data.get("ups.beeper.status"):
+        if status in data.get("ups.beeper.status"):
             ups_beeper_status.labels(status).set(1)
         else:
             ups_beeper_status.labels(status).set(0)
     for status in statuses:
-        if status in clean_data.get("ups.status"):
+        if status in data.get("ups.status"):
             ups_status.labels(status).set(1)
         else:
             ups_status.labels(status).set(0)
@@ -65,7 +65,7 @@ def check_metrics(ups_name, ups_host, ups_port, metrics):
 
 # Create dict of UPS variables with Prometheus Gauges
 def get_metrics(ups_name, ups_host, ups_port):
-    client = PyNUTClient(host=ups_host, port=ups_port)
+    client = PyNUTClient(ups_host, ups_port)
     client_vars = client.list_vars(ups_name)
     metrics = {}
     for var in client_vars:
@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     # Get list of available metrics
     logger.info("Determining list of available metrics...")
-    basic_metrics = get_metrics(ups_name, ups_host, ups_port)
+    basic_metrics = get_metrics(ups_name, ups_ip, ups_port)
     metrics_count = len(basic_metrics.keys())
     logger.info(f"{metrics_count} metrics available to be exported")
 
@@ -134,12 +134,15 @@ if __name__ == "__main__":
                 ups_ip = socket.gethostbyname(ups_host)
                 logger.debug(f"UPS IP Address is {ups_ip}")
             if loop_counter % poll_rate == 0:
-                check_metrics(ups_name, ups_ip, ups_port, basic_metrics)
+                data = PyNUTClient(ups_ip, ups_port).list_vars(ups_name)
+                check_metrics(data, basic_metrics)
+                check_label_metrics(data)
                 logger.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logger.error(f"Failed to connect to {ups_fullname}!")
             logger.debug(f"Exception: {e}!")
             clear_metrics(basic_metrics)
+            clear_label_metrics()
             logger.debug("Reset metrics to 0 because UPS was unreachable")
         time.sleep(1)
 
