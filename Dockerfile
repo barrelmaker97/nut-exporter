@@ -1,4 +1,4 @@
-FROM python:3.9.4-slim-buster
+FROM python:3.9.5-slim-buster
 RUN useradd -u 1234 -m exporter
 USER exporter
 WORKDIR /home/exporter
