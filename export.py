@@ -35,22 +35,24 @@ def clear_metrics(metrics):
     for metric in metrics:
         metrics.get(metric).set(0)
 
+
+# Resets all labelled metrics to 0
 def clear_label_metrics():
-    # Clear metrics with labels
     for status in beeper_statuses:
         ups_beeper_status.labels(status).set(0)
     for status in statuses:
         ups_status.labels(status).set(0)
 
 
-# Read data from UPS
-def check_metrics(data, metrics):
+# Update Prometheus Metrics
+def update_metrics(data, metrics):
     # Set basic metrics
     for metric in metrics:
         metrics.get(metric).set(data.get(metric))
 
-def check_label_metrics(data):
-    # Set metrics with labels
+
+# Update Labelled Prometheus Metrics
+def update_label_metrics(data):
     for status in beeper_statuses:
         if status in data.get("ups.beeper.status"):
             ups_beeper_status.labels(status).set(1)
@@ -135,8 +137,8 @@ if __name__ == "__main__":
                 logger.debug(f"UPS IP Address is {ups_ip}")
             if loop_counter % poll_rate == 0:
                 data = PyNUTClient(ups_ip, ups_port).list_vars(ups_name)
-                check_metrics(data, basic_metrics)
-                check_label_metrics(data)
+                update_metrics(data, basic_metrics)
+                update_label_metrics(data)
                 logger.debug(f"Checked {ups_fullname}")
         except Exception as e:
             logger.error(f"Failed to connect to {ups_fullname}!")
