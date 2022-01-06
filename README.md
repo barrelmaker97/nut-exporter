@@ -15,7 +15,7 @@ All config is done via environment variables, listed below:
 
 # License
 
-Copyright (c) 2021 Nolan Cooper
+Copyright (c) 2022 Nolan Cooper
 
 This exporter is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
