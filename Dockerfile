@@ -1,4 +1,4 @@
-FROM python:3.10.2-alpine
+FROM python:3.10.3-alpine
 RUN adduser --disabled-password --gecos "" --uid "1234" "exporter"
 USER exporter
 WORKDIR /home/exporter
