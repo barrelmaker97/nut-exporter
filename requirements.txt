@@ -1,2 +1,2 @@
-prometheus-client==0.17.1
+prometheus-client==0.18.0
 nut2==2.1.1
