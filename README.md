@@ -1,6 +1,14 @@
-[![CodeFactor](https://www.codefactor.io/repository/github/barrelmaker97/nut-exporter/badge)](https://www.codefactor.io/repository/github/barrelmaker97/nut-exporter)
-# nut-exporter
-Prometheus Exporter for Network UPS Tools
+# nut-exporter (Deprecated)
+
+**nut-exporter** is a Prometheus exporter for Network UPS Tools (NUT) written in Python. This project is now deprecated and no longer maintained.
+
+## Deprecation Notice
+
+This Python-based exporter has been superseded by a new, more efficient version written in Rust. As this project is deprecated, it will no longer receive updates or support. I recommend transitioning to the Rust-based exporter for improved performance, reliability, and ongoing maintenance.
+
+You can find the new Rust-based exporter here:
+
+[https://github.com/barrelmaker97/pistachio](https://github.com/barrelmaker97/pistachio)
 
 ## Configuration
 All config is done via environment variables, listed below:
